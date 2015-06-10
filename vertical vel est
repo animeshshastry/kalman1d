@@ -1,0 +1,93 @@
+
+float z,a,y,s,sinv,r,K[2],X[2],XTEMP[2],P[2][2],PTEMP[2][2],F[2][2],H[2],U[2],diff,previous=0,current;
+
+void initializeMatrices()
+{
+  F={{1,diff},
+     {0,  1 }};
+  
+  U={(diff*diff)/2,
+         diff     };
+       
+  H={1,0};
+  X={0,0};
+  
+  P={{1,0},
+     {0,1}};
+}
+void getheight()
+{
+  //height from barometer
+  
+}
+void getaccel()
+{
+  //acceleration from imu
+}
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  initializeMatrices();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  getheight();
+  getaccel();
+  current=millis()/1000;
+  diff=current-previous;
+  previous=current;
+  kalman();
+  printX();
+}
+
+void kalman()
+{
+  
+  //measurement updatey=z-Hx
+  
+  y=z-(H[0]*X[0]+H[1]*X[1]);
+  
+  s=(H[0]*P[0][0]+H[1]*P[1][0])*H[0]+H[1]*(H[0]*P[0][1]+H[1]*P[1][1])+r;
+  sinv=1/s;
+  
+  K[0]=(P[0][0]*H[0]+P[0][1]*H[1])*sinv;
+  K[1]=(P[1][0]*H[0]+P[1][1]*H[1])*sinv;
+  
+  X[0]=X[0]+K[0]*y;
+  X[1]=X[1]+K[1]*y;
+  
+  PTEMP[0][0]=P[0][0]*(1-K[0]*H[0])-P[1][0]*K[0]*H[1];
+  PTEMP[0][1]=P[0][1]*(1-K[0]*H[0])-P[1][1]*K[0]*H[1];
+  PTEMP[1][0]=-P[0][0]*K[1]*H[0]+P[1][0]*(1-K[1]*H[1]);
+  PTEMP[1][1]=-P[0][1]*K[1]*H[0]+P[1][1]*(1-K[1]*H[1]);
+  P[0][0]=PTEMP[0][0];
+  P[0][1]=PTEMP[0][1];
+  P[1][0]=PTEMP[1][0];
+  P[1][1]=PTEMP[1][1];
+  
+  //PREDICTION
+  
+  XTEMP[0]=F[0][0]*X[0]+F[0][1]*X[1]+a*U[0];
+  XTEMP[1]=F[1][0]*X[0]+F[1][1]*X[1]+a*U[1];
+  X[0]=XTEMP[0];
+  X[1]=XTEMP[1];
+  
+  
+  PTEMP[0][0]=F[0][0]*(F[0][0]*P[0][0]+F[0][1]*P[1][0])+F[0][1]*(F[0][0]*P[0][1]+F[0][1]*P[1][1]);
+  PTEMP[0][1]=F[1][0]*(F[0][0]*P[0][0]+F[0][1]*P[1][0])+F[1][1]*(F[0][0]*P[0][1]+F[0][1]*P[1][1]);
+  PTEMP[1][0]=F[0][0]*(F[1][0]*P[0][0]+F[1][1]*P[1][0])+F[0][1]*(F[1][0]*P[0][1]+F[1][1]*P[1][1]);
+  PTEMP[1][1]=F[1][0]*(F[1][0]*P[0][0]+F[1][1]*P[1][0])+F[1][1]*(F[1][0]*P[0][1]+F[1][1]*P[1][1]);
+  P[0][0]=PTEMP[0][0];
+  P[0][1]=PTEMP[0][1];
+  P[1][0]=PTEMP[1][0];
+  P[1][1]=PTEMP[1][1];
+  
+}
+
+void printX()
+{
+  Serial.print(X[0]);Serial.print('\t');
+  Serial.print(X[1]);Serial.print('\t');
+  Serial.print('\n');
+}
